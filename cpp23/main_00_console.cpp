@@ -90,13 +90,14 @@ int main() {
     while(running.load(std::memory_order_relaxed)) {
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        
+        std::unordered_map<std::string,double> sensors_status = get_sensors_status(configuration);
+        std::unordered_map<std::string,double> commands_status = get_commands_status(configuration);
+
         int ch_status = channel->loop();
         if( ch_status != Channel::OK) {
             channel->connect(); // attempt to reconnect
         }
-        
-        std::unordered_map<std::string,double> sensors_status = get_sensors_status(configuration);
-        std::unordered_map<std::string,double> commands_status = get_commands_status(configuration);
 
         const std::vector<std::string> messages = channel->get_messages();
         for (const auto& msg : messages) {
