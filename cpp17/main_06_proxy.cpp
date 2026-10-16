@@ -8,15 +8,12 @@
 #include <unordered_map>
 #include <memory>
 #include <atomic>
-#include "utilities.hpp"
-
-// --- classes
-
 #include <variant>
 #include <string>
 #include <type_traits>
 #include <optional>
 #include <cmath>
+#include "utilities.hpp"
 
 class Value {
 public:
@@ -415,8 +412,6 @@ private:
     double hysteresis_;
     double equality_tolerance_;
 };
-
-#include <functional> // std::function
 
 class Alarm final {
 public:

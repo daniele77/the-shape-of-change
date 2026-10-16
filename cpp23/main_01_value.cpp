@@ -7,13 +7,10 @@
 #include <unordered_map>
 #include <memory>
 #include <atomic>
-#include "utilities.hpp"
-
-// --- classes
-
 #include <variant>
 #include <string>
 #include <type_traits>
+#include "utilities.hpp"
 
 class Value {
 public:
