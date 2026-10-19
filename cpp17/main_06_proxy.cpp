@@ -572,7 +572,7 @@ public:
 
             auto condition = make_alarm_condition(alarm_config);
             if (!condition) {
-                rtu::print("[Alarm] Invalid condition configuration for point {}\n", alarm_config.point_id);
+                std::cout << "[Alarm] Invalid condition configuration for point " << alarm_config.point_id << '\n';
                 continue;
             }
 
@@ -694,7 +694,7 @@ private:
     void handle_messages() {
         const std::vector<std::string> messages = channel_.get_messages();
         for (const auto& msg : messages) {
-            rtu::print("[RX MESSAGE] Received: {}\n", msg);
+            std::cout << "[RX MESSAGE] Received: " << msg << '\n';
 
             // format of the incoming message: CMD:<id>:<value> or SENSOR:<id>
             const auto parts = split(msg, ':');
@@ -703,16 +703,16 @@ private:
             }
 
             if (parts[0] == "CMD") {
-                rtu::print(" -> [Output] Valid command\n");
+                std::cout << " -> [Output] Valid command\n";
 
                 // format CMD:<id>:<value>
                 if (parts.size() == 3) {
                     const std::string& id = parts[1];
                     const std::string& value = parts[2];
-                    rtu::print(" -> [Output] ID: {} | Value: {}\n", id, value);
+                    std::cout << " -> [Output] ID: " << id << " | Value: " << value << '\n';
                     CommandTarget* command_target = registry_.command_target(id);
                     if (command_target == nullptr) {
-                        rtu::print(" -> [Output] Unknown command ID\n");
+                        std::cout << " -> [Output] Unknown command ID\n";
                         channel_.send("CMD_RESULT/" + id + ":" + std::to_string(false));
                         continue;
                     }
@@ -721,17 +721,17 @@ private:
                         bool result = command_target->activate(Value::from_string(value));
                         channel_.send("CMD_RESULT/" + id + ":" + std::to_string(result));
                     } catch (const std::exception&) {
-                        rtu::print(" -> [Output] Invalid numeric value\n");
+                        std::cout << " -> [Output] Invalid numeric value\n";
                         channel_.send("CMD_RESULT/" + id + ":" + std::to_string(false));
                     }
                 }
             } else if (parts[0] == "SENSOR") {
-                rtu::print(" -> [Sensor] Valid message\n");
+                std::cout << " -> [Sensor] Valid message\n";
 
                 // format SENSOR:<id>
                 if (parts.size() == 2) {
                     const std::string& id = parts[1];
-                    rtu::print(" -> [Sensor] ID: {}\n", id);
+                    std::cout << " -> [Sensor] ID: " << id << '\n';
                     if (id == "<ALL>") {
                         for (const auto& [id, input] : registry_.inputs()) {
                             if (input->get_value()) {
@@ -802,7 +802,7 @@ int main() {
     std::signal(SIGTERM, signal_handler);
     std::signal(SIGINT, signal_handler);
 
-    rtu::print("Starting RTU...\n");
+    std::cout << "Starting RTU...\n";
 
     Configuration configuration = {
         .sensors = {
@@ -858,6 +858,6 @@ int main() {
         cli_thread.join();
     }
 
-    rtu::print("RTU shut down...\n");
+    std::cout << "RTU shut down...\n";
     return 0;
 }

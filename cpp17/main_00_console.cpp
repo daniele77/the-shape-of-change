@@ -73,7 +73,7 @@ int main() {
     std::signal(SIGTERM, signal_handler);
     std::signal(SIGINT, signal_handler);
 
-    rtu::print("Starting RTU...\n");
+    std::cout << "Starting RTU...\n";
 
     Configuration configuration;
 
@@ -102,7 +102,7 @@ int main() {
 
         const std::vector<std::string> messages = channel->get_messages();
         for (const auto& msg : messages) {
-            rtu::print("[RX MESSAGE] Received: {}\n", msg);
+            std::cout << "[RX MESSAGE] Received: " << msg << '\n';
 
             // format of the incoming message: CMD:<id>:<value> or SENSOR:<id>
             const auto parts = split(msg, ':');
@@ -111,20 +111,20 @@ int main() {
             }
 
             if (parts[0] == "CMD") {
-                rtu::print(" -> [Output] Valid command\n");
+                std::cout << " -> [Output] Valid command\n";
 
                 // format CMD:<id>:<value>
                 if (parts.size() == 3) {
                     const std::string& id = parts[1];
                     const std::string& value_text = parts[2];
-                    rtu::print(" -> [Output] ID: {} | Value: {}\n", id, value_text);
+                    std::cout << " -> [Output] ID: " << id << " | Value: " << value_text << '\n';
 
                     auto command_it = std::find_if(configuration.commands.begin(), configuration.commands.end(), [id](const auto& cmd) {
                         return cmd.id == id;
                     });
 
                     if (command_it == configuration.commands.end()) {
-                        rtu::print(" -> [Output] Unknown command ID\n");
+                        std::cout << " -> [Output] Unknown command ID\n";
                         continue;
                     }
 
@@ -132,26 +132,26 @@ int main() {
                         const int numeric_value = std::stoi(value_text);
                         write_digital(command_it->address, numeric_value == 1);
                     } catch (const std::exception&) {
-                        rtu::print(" -> [Output] Invalid numeric value\n");
+                        std::cout << " -> [Output] Invalid numeric value\n";
                     }
                 }
             } else if (parts[0] == "SENSOR") {
-                rtu::print(" -> [Sensor] Valid message\n");
+                std::cout << " -> [Sensor] Valid message\n";
 
                 // format SENSOR:<id>
                 if (parts.size() == 2) {
                     const std::string& id = parts[1];
-                    rtu::print(" -> [Sensor] ID: {}\n", id);
+                    std::cout << " -> [Sensor] ID: " << id << '\n';
                     if (id == "<ALL>") {
-                        for (const auto& [id, value] : sensors_status) {
-                            channel->send("SENSOR/" + id + ":" + std::to_string(value));
+                        for (auto it = sensors_status.begin(); it != sensors_status.end(); ++it) {
+                            channel->send("SENSOR/" + it->first + ":" + std::to_string(it->second));
                         }
                     } else {
                         const auto sensor_it = sensors_status.find(id);
                         if (sensor_it != sensors_status.end()) {
                             channel->send("SENSOR/" + id + ":" + std::to_string(sensor_it->second));
                         } else {
-                            rtu::print(" -> [Sensor] Unknown sensor ID\n");
+                            std::cout << " -> [Sensor] Unknown sensor ID\n";
                         }
                     }
                 }
@@ -159,7 +159,9 @@ int main() {
         }
 
         // check for changes
-        for (const auto& [id, value] : sensors_status) {
+        for (auto it = sensors_status.begin(); it != sensors_status.end(); ++it) {
+            const std::string& id = it->first;
+            const auto& value = it->second;
             if (previous_sensors.find(id) == previous_sensors.end() || previous_sensors[id] != value) {
                 channel->send("SENSOR/" + id + ":" + std::to_string(value));
                 previous_sensors[id] = value;
@@ -168,10 +170,14 @@ int main() {
 
         // periodic update of sensor and command statuses
         if (timer.expired()) {
-            for (const auto& [id, value] : sensors_status) {
+            for (auto it = sensors_status.begin(); it != sensors_status.end(); ++it) {
+                const std::string& id = it->first;
+                const auto& value = it->second;
                 channel->send("SENSOR/" + id + ":" + std::to_string(value));
             }
-            for (const auto& [id, value] : commands_status) {
+            for (auto it = commands_status.begin(); it != commands_status.end(); ++it) {
+                const std::string& id = it->first;
+                const auto& value = it->second;
                 channel->send("CMD/" + id + ":" + std::to_string(value));
             }
             timer.restart();
@@ -182,6 +188,6 @@ int main() {
         cli_thread.join();
     }
 
-    rtu::print("RTU shut down...\n");
+    std::cout << "RTU shut down...\n";
     return 0;
 }

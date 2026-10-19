@@ -4,6 +4,7 @@
 #include <atomic>
 #include <chrono>
 #include <csignal>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -14,36 +15,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-namespace rtu {
-inline void print_impl(std::ostream& os, const std::string& fmt) {
-    os << fmt;
-}
-
-template <typename T, typename... Ts>
-inline void print_impl(std::ostream& os, const std::string& fmt, T&& value, Ts&&... rest) {
-    const std::size_t pos = fmt.find("{}");
-    if (pos == std::string::npos) {
-        os << fmt;
-        return;
-    }
-    os << fmt.substr(0, pos) << value;
-    print_impl(os, fmt.substr(pos + 2), std::forward<Ts>(rest)...);
-}
-
-template <typename... Ts>
-inline void print(const std::string& fmt, Ts&&... args) {
-    print_impl(std::cout, fmt, std::forward<Ts>(args)...);
-}
-
-template <typename... Ts>
-inline void println(const std::string& fmt, Ts&&... args) {
-    print(fmt, std::forward<Ts>(args)...);
-    std::cout << '\n';
-}
-}
-
-// Utilities
 
 inline std::vector<std::string> split(const std::string& msg, char delimiter) {
     std::vector<std::string> parts;
@@ -120,7 +91,7 @@ public:
     bool connect() override {
         connected_ = reachable_;
         if (connected_) {
-            rtu::println("[MockChannel] Connected successfully");
+            std::cout << "[MockChannel] Connected successfully\n";
         }
         return connected_;
     }
@@ -128,7 +99,7 @@ public:
     int loop() override {
         if (connected_ && !reachable_) {
             connected_ = false;
-            rtu::println("[MockChannel] Disconnected due to reachability loss");
+            std::cout << "[MockChannel] Disconnected due to reachability loss\n";
         }
         return connected_ ? OK : ERR_DISCONNECTED;
     }
@@ -137,7 +108,7 @@ public:
         if (!connected_) {
             return;
         }
-        rtu::println("[Tx] Msg: {}", msg);
+        std::cout << "[Tx] Msg: " << msg << '\n';
     }
 
     std::vector<std::string> get_messages() override {
@@ -172,18 +143,18 @@ private:
 
 inline void interactive_console(std::atomic<bool>& is_running, MockChannel& channel) {
     auto print_help = []() {
-        rtu::println("\n====================================================");
-        rtu::println("  INTERACTIVE CONSOLE");
-        rtu::println("  Supported commands:");
-        rtu::println("    link up|down           -> Set the link status to up or down");
-        rtu::println("    set <address> <value>  -> Set an analog or digital value");
-        rtu::println("    dump                   -> Print the current register state");
-        rtu::println("    cmd <DO> <value>       -> Simulate a message for a digital output command");
-        rtu::println("    sensor <input>         -> Simulate a message requiring a sensor value");
-        rtu::println("    sensors                -> Simulate a message requiring all sensors value");
-        rtu::println("    help                   -> Show this help message");
-        rtu::println("    exit                   -> Exit the interactive console");
-        rtu::println("====================================================\n");
+        std::cout << "\n====================================================\n";
+        std::cout << "  INTERACTIVE CONSOLE\n";
+        std::cout << "  Supported commands:\n";
+        std::cout << "    link up|down           -> Set the link status to up or down\n";
+        std::cout << "    set <address> <value>  -> Set an analog or digital value\n";
+        std::cout << "    dump                   -> Print the current register state\n";
+        std::cout << "    cmd <DO> <value>       -> Simulate a message for a digital output command\n";
+        std::cout << "    sensor <input>         -> Simulate a message requiring a sensor value\n";
+        std::cout << "    sensors                -> Simulate a message requiring all sensors value\n";
+        std::cout << "    help                   -> Show this help message\n";
+        std::cout << "    exit                   -> Exit the interactive console\n";
+        std::cout << "====================================================\n\n";
     };
     print_help();
 
@@ -205,17 +176,17 @@ inline void interactive_console(std::atomic<bool>& is_running, MockChannel& chan
             if (command_stream >> addr >> val) {
                 std::lock_guard<std::mutex> lock(io_mutex);
                 io_memory[addr] = val;
-                rtu::println("[CLI] Register {} set to {}", addr, val);
+                std::cout << "[CLI] Register " << addr << " set to " << val << '\n';
             } else {
-                rtu::println("[CLI] Usage: set <address> <value>");
+                std::cout << "[CLI] Usage: set <address> <value>\n";
             }
         } else if (cmd == "dump") {
             std::lock_guard<std::mutex> lock(io_mutex);
-            rtu::println("\n--- REGISTER DUMP ---");
-            for (const auto& [addr, val] : io_memory) {
-                rtu::println("  Address {:2d} : {}", addr, val);
+            std::cout << "\n--- REGISTER DUMP ---\n";
+            for (auto it = io_memory.begin(); it != io_memory.end(); ++it) {
+                std::cout << "  Address " << std::setw(2) << it->first << " : " << it->second << '\n';
             }
-            rtu::println("---------------------");
+            std::cout << "---------------------\n";
         } else if (cmd == "link") {
             std::string status;
             if (command_stream >> status) {
@@ -224,30 +195,30 @@ inline void interactive_console(std::atomic<bool>& is_running, MockChannel& chan
                 } else if (status == "down") {
                     channel.set_reachable(false);
                 } else {
-                    rtu::println("[CLI] Usage: link up|down");
+                    std::cout << "[CLI] Usage: link up|down\n";
                 }
             } else {
-                rtu::println("[CLI] Usage: link up|down");
+                std::cout << "[CLI] Usage: link up|down\n";
             }
         } else if (cmd == "cmd") {
             std::string digout;
             int value;
             if (command_stream >> digout >> value) {
-                rtu::println("[CLI] Executing command: {} {}", digout, value);
+                std::cout << "[CLI] Executing command: " << digout << ' ' << value << '\n';
                 channel.add_received_message("CMD:" + digout + ":" + std::to_string(value));
             } else {
-                rtu::println("[CLI] Usage: cmd <DO> <value>");
+                std::cout << "[CLI] Usage: cmd <DO> <value>\n";
             }
         } else if (cmd == "sensor") {
             std::string sensor_id;
             if (command_stream >> sensor_id) {
-                rtu::println("[CLI] Simulating sensor input for: {}", sensor_id);
+                std::cout << "[CLI] Simulating sensor input for: " << sensor_id << '\n';
                 channel.add_received_message("SENSOR:" + sensor_id);
             } else {
-                rtu::println("[CLI] Usage: sensor <input>");
+                std::cout << "[CLI] Usage: sensor <input>\n";
             }
         } else if (cmd == "sensors") {
-            rtu::println("[CLI] Simulating input for all sensors");
+            std::cout << "[CLI] Simulating input for all sensors\n";
             channel.add_received_message("SENSOR:<ALL>");
         } else if (cmd == "help") {
             print_help();
@@ -255,7 +226,7 @@ inline void interactive_console(std::atomic<bool>& is_running, MockChannel& chan
             is_running.store(false, std::memory_order_relaxed);
             break;
         } else {
-            rtu::println("[CLI] Unknown command: {}", cmd);
+            std::cout << "[CLI] Unknown command: " << cmd << '\n';
         }
     }
 }

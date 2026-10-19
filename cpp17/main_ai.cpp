@@ -81,7 +81,7 @@ public:
         std::signal(SIGTERM, signal_handler);
         std::signal(SIGINT, signal_handler);
 
-        rtu::print("Starting RTU...\n");
+        std::cout << "Starting RTU...\n";
 
         std::ios::sync_with_stdio(false);
         start_cli_thread();
@@ -108,7 +108,7 @@ public:
         }
 
         stop_cli_thread();
-        rtu::print("RTU shut down...\n");
+        std::cout << "RTU shut down...\n";
         return 0;
     }
 
@@ -128,7 +128,7 @@ private:
         const std::unordered_map<std::string, double>& commands_status) {
         const std::vector<std::string> messages = channel_->get_messages();
         for (const auto& msg : messages) {
-            rtu::print("[RX MESSAGE] Received: {}\n", msg);
+            std::cout << "[RX MESSAGE] Received: " << msg << '\n';
 
             const auto parts = split(msg, ':');
             if (parts.empty()) {
@@ -146,7 +146,7 @@ private:
     void handle_command(
         const std::vector<std::string>& parts,
         const std::unordered_map<std::string, double>& commands_status) {
-        rtu::print(" -> [Output] Valid command\n");
+        std::cout << " -> [Output] Valid command\n";
 
         if (parts.size() != 3) {
             return;
@@ -154,7 +154,7 @@ private:
 
         const std::string& id = parts[1];
         const std::string& value_text = parts[2];
-        rtu::print(" -> [Output] ID: {} | Value: {}\n", id, value_text);
+        std::cout << " -> [Output] ID: " << id << " | Value: " << value_text << '\n';
 
         auto command_it = std::find_if(
             configuration_.commands.begin(),
@@ -162,7 +162,7 @@ private:
             [&id](const auto& cmd) { return cmd.id == id; });
 
         if (command_it == configuration_.commands.end()) {
-            rtu::print(" -> [Output] Unknown command ID\n");
+            std::cout << " -> [Output] Unknown command ID\n";
             return;
         }
 
@@ -170,21 +170,21 @@ private:
             const int numeric_value = std::stoi(value_text);
             write_digital(command_it->address, numeric_value == 1);
         } catch (const std::exception&) {
-            rtu::print(" -> [Output] Invalid numeric value\n");
+            std::cout << " -> [Output] Invalid numeric value\n";
         }
     }
 
     void handle_sensor(
         const std::vector<std::string>& parts,
         const std::unordered_map<std::string, double>& sensors_status) {
-        rtu::print(" -> [Sensor] Valid message\n");
+        std::cout << " -> [Sensor] Valid message\n";
 
         if (parts.size() != 2) {
             return;
         }
 
         const std::string& id = parts[1];
-        rtu::print(" -> [Sensor] ID: {}\n", id);
+        std::cout << " -> [Sensor] ID: " << id << '\n';
 
         if (id == "<ALL>") {
             for (const auto& [sensor_id, value] : sensors_status) {
@@ -197,7 +197,7 @@ private:
         if (sensor_it != sensors_status.end()) {
             channel_->send("SENSOR/" + id + ":" + std::to_string(sensor_it->second));
         } else {
-            rtu::print(" -> [Sensor] Unknown sensor ID\n");
+            std::cout << " -> [Sensor] Unknown sensor ID\n";
         }
     }
 

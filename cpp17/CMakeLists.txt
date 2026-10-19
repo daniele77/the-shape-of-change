@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+find_package(Threads REQUIRED)
+
 add_executable(rtu_00 main_00_console.cpp)
 add_executable(rtu_01 main_01_value.cpp)
 add_executable(rtu_02 main_02_ioitem.cpp)
@@ -16,3 +18,19 @@ add_executable(rtu_05 main_05_alarm.cpp)
 add_executable(rtu_06 main_06_proxy.cpp)
 add_executable(rtu_07 main_07_factories.cpp)
 add_executable(rtu_ai main_ai.cpp)
+
+set(RTU_TARGETS
+    rtu_00
+    rtu_01
+    rtu_02
+    rtu_03
+    rtu_04
+    rtu_05
+    rtu_06
+    rtu_07
+    rtu_ai
+)
+
+foreach(target ${RTU_TARGETS})
+    target_link_libraries(${target} PRIVATE Threads::Threads)
+endforeach()
